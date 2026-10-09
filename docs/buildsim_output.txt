@@ -1,0 +1,18 @@
+revision  0:   0/420 cached (0.0%), wall clock 4160ms
+revision  1: 341/420 cached (81.2%), wall clock 1310ms
+revision  2: 341/420 cached (81.2%), wall clock 1164ms
+revision  3: 374/420 cached (89.0%), wall clock 915ms
+revision  4: 304/420 cached (72.4%), wall clock 1314ms
+revision  5: 337/420 cached (80.2%), wall clock 1099ms
+revision  6: 338/420 cached (80.5%), wall clock 1079ms
+revision  7: 305/420 cached (72.6%), wall clock 1281ms
+revision  8: 302/420 cached (71.9%), wall clock 1277ms
+revision  9: 374/420 cached (89.0%), wall clock 857ms
+revision 10: 376/420 cached (89.5%), wall clock 815ms
+revision 11: 395/420 cached (94.0%), wall clock 711ms
+
+=== Remote build cache simulation: 420 targets, 12 revisions ===
+cold build (revision 0): 0/420 cached (0% expected), 4160 ms
+warm rebuild (revision 11, no source changes): 395/420 cached (94.0%), 711 ms
+wall clock reduction: 5.85x (4160ms -> 711ms)
+CAS: 3072 blobs stored, 330784 bytes stored, 1495871 bytes referenced, dedup ratio 4.52x

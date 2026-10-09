@@ -1,0 +1,145 @@
+syntax = "proto3";
+
+package reapi;
+
+option java_package = "com.manas.reapi.proto";
+option java_multiple_files = true;
+
+// Digest is REAPI's content address: the SHA-256 hash of a blob plus its
+// size. Two blobs with the same hash are treated as the same blob,
+// which is the whole content-addressing idea and what CAS
+// deduplication measures.
+message Digest {
+  string hash = 1;
+  int64 size_bytes = 2;
+}
+
+message FileNode {
+  string name = 1;
+  Digest digest = 2;
+  bool is_executable = 3;
+}
+
+message DirectoryNode {
+  string name = 1;
+  Digest digest = 2; // digest of that subdirectory's own serialized Directory message
+}
+
+// Directory is REAPI's recursive input-tree node. A tree of these,
+// hashed bottom-up, is what makes the whole input tree hermetic: two
+// actions with byte-identical inputs get byte-identical digests at
+// every level, root included.
+message Directory {
+  repeated FileNode files = 1;
+  repeated DirectoryNode directories = 2;
+}
+
+message Command {
+  repeated string arguments = 1;
+  message EnvironmentVariable {
+    string name = 1;
+    string value = 2;
+  }
+  repeated EnvironmentVariable environment_variables = 2;
+  repeated string output_paths = 3;
+}
+
+// Action is the hermetic unit of work: a Command digest plus an input
+// root Directory digest. ActionDigest = hash(serialize(Action)) is the
+// key the ActionCache is keyed on, which is why it is called hermetic:
+// nothing about the action's identity depends on anything outside this
+// message.
+message Action {
+  Digest command_digest = 1;
+  Digest input_root_digest = 2;
+}
+
+message OutputFile {
+  string path = 1;
+  Digest digest = 2;
+  bool is_executable = 3;
+}
+
+message ActionResult {
+  repeated OutputFile output_files = 1;
+  int32 exit_code = 2;
+  bool cached_result = 3; // server sets this true on a cache hit, for observability
+}
+
+// --- ContentAddressableStorage ---
+
+message FindMissingBlobsRequest {
+  repeated Digest blob_digests = 1;
+}
+message FindMissingBlobsResponse {
+  repeated Digest missing_blob_digests = 1;
+}
+
+message BatchUpdateBlobsRequest {
+  message Request {
+    Digest digest = 1;
+    bytes data = 2;
+  }
+  repeated Request requests = 1;
+}
+message BatchUpdateBlobsResponse {
+  message Response {
+    Digest digest = 1;
+    int32 status_code = 2; // 0 = OK
+  }
+  repeated Response responses = 1;
+}
+
+message BatchReadBlobsRequest {
+  repeated Digest digests = 1;
+}
+message BatchReadBlobsResponse {
+  message Response {
+    Digest digest = 1;
+    bytes data = 2;
+    int32 status_code = 3;
+  }
+  repeated Response responses = 1;
+}
+
+service ContentAddressableStorage {
+  rpc FindMissingBlobs(FindMissingBlobsRequest) returns (FindMissingBlobsResponse);
+  rpc BatchUpdateBlobs(BatchUpdateBlobsRequest) returns (BatchUpdateBlobsResponse);
+  rpc BatchReadBlobs(BatchReadBlobsRequest) returns (BatchReadBlobsResponse);
+}
+
+// --- ActionCache ---
+
+message GetActionResultRequest {
+  Digest action_digest = 1;
+}
+message UpdateActionResultRequest {
+  Digest action_digest = 1;
+  ActionResult action_result = 2;
+}
+
+service ActionCache {
+  rpc GetActionResult(GetActionResultRequest) returns (ActionResult);
+  rpc UpdateActionResult(UpdateActionResultRequest) returns (ActionResult);
+}
+
+// --- Execution ---
+//
+// The real REAPI Execute RPC returns a google.longrunning.Operation and
+// is a server-streaming call a client long-polls; that machinery exists
+// to let a client disconnect and reattach to a long build action. This
+// project's Execution service is a deliberate simplification: a
+// synchronous unary call that returns the ActionResult directly once
+// the (simulated) action finishes. What this project tests is caching
+// and content addressing, not long-poll execution semantics, so the
+// simplification costs nothing that matters here; it is disclosed, not
+// hidden.
+
+message ExecuteRequest {
+  Action action = 1;
+  bool skip_cache_lookup = 2;
+}
+
+service Execution {
+  rpc Execute(ExecuteRequest) returns (ActionResult);
+}
