@@ -1,0 +1,6 @@
+
+=== Affected-test release gate: 60 injected-bug revisions over a 420-target graph, 300 tests ===
+revisions where the bug actually changed at least one test's output: 44 / 60
+total ground-truth failing tests across all revisions: 142
+total tests selected by the fast graph-based gate: 142 (vs 18000 if every revision ran the full suite)
+MISSED_FAILURES: 0
